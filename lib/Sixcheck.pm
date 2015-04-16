@@ -20,32 +20,36 @@ method instantiate(Mu:U \type) {
   }
 }
 
-method check(Mu:U \type, Callable $code) {
+method check(Mu:U \type, Callable $code, :$name) {
   use Test;
-  subtest {
-    plan $.iterations;
-    for ^$.iterations {
-      my $value = $.instantiate(type);
-      # todo use live_ok here? (for PRE/POST invariants)
-      ok $code($value), "Invariant does not hold for type $(type.perl) and value $($value.Str.substr(0, 50))";
+  for ^$.iterations {
+    my $value = $.instantiate(type);
+    # todo use live_ok here? (for PRE/POST invariants)
+    if !$code($value) {
+      flunk "Invariant $name does not hold for type $(type.perl) and value $(self!format($value)) from $(callframe.file):$(callframe.line)";
+      return;
     }
   }
+  pass "Invariant $name holded for type $(type.perl) for every value tested.";
 }
 
-subset MultiSub of Sub where *.candidates.elems > 1;
-multi method check-sub(MultiSub $f, Callable $code) {
-  $.check-sub($_, $code) for $f.candidates;
-}
+#subset MultiSub of Sub where *.candidates.elems > 1;
+#multi method check-sub(MultiSub $f, Callable $code) {
+#  $.check-sub($_, $code) for $f.candidates;
+#}
 
-multi method check-sub(Callable $f, Callable $code) {
+multi method check-sub(Callable $f, Callable $code, :$name = '') {
   use Test;
-  subtest {
-    plan $.iterations;
-    for ^$.iterations {
-      my $values = self!generate-for-sig($f.signature);
-      my $return-value = $f(|$values);
+  my $sub-name = $f.name || "<anon>";
+  for ^$.iterations {
+    my @capture = self!generate-for-sig($f.signature);
+    my $value = $f(|@capture);
+    if !$code($value) {
+      flunk "Invariant $name does not hold for sub $sub-name and value $(self!format($value))";
+      return;
     }
   }
+  pass "Invariant $name holded for sub $name for every value tested.";
 }
 
 method !generate-for-sig(Signature $c) {
@@ -72,3 +76,5 @@ method !generate-for-sig(Signature $c) {
     }
   }
 }
+
+method !format($_) { $_.Str.substr(0, 50) }
