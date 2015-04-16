@@ -4,12 +4,13 @@ has Int $.iterations = 100;
 
 has $!create = :{
   DEFAULT => *.new,
-  (Int) => { round rand * 1000 }
+  (Int) => { (-5000..5000).pick },
+  (Str) => { ("a".."z", "A".."Z").roll: (^50).pick },
 }
 
-method register-type(Mu:U \type, Callable $code) {
+method register-type(Mu:U \type, Callable $check) {
   die "Type already registered: $(type.perl)" if $!create{type}:exists;
-  $!create{type} = $code;
+  $!create{type} = $check;
 }
 
 method instantiate(Mu:U \type) {
@@ -20,12 +21,12 @@ method instantiate(Mu:U \type) {
   }
 }
 
-method check(Mu:U \type, Callable $code, :$name) {
+method check(Mu:U \type, Callable $check, :$name) {
   use Test;
   for ^$.iterations {
     my $value = $.instantiate(type);
     # todo use live_ok here? (for PRE/POST invariants)
-    if !$code($value) {
+    if not $check($value) {
       flunk "Invariant $name does not hold for type $(type.perl) and value $(self!format($value)) from $(callframe.file):$(callframe.line)";
       return;
     }
@@ -34,27 +35,40 @@ method check(Mu:U \type, Callable $code, :$name) {
 }
 
 #subset MultiSub of Sub where *.candidates.elems > 1;
-#multi method check-sub(MultiSub $f, Callable $code) {
-#  $.check-sub($_, $code) for $f.candidates;
+#multi method check-sub(MultiSub $f, Callable $check) {
+#  $.check-sub($_, $check) for $f.candidates;
 #}
 
-multi method check-sub(Callable $f, Callable $code, :$name = '') {
+multi method check-sub(Callable $f, Callable $check, :$name = '') {
   use Test;
   my $sub-name = $f.name || "<anon>";
   for ^$.iterations {
     my @capture = self!generate-for-sig($f.signature);
     my $value = $f(|@capture);
-    if !$code($value) {
-      flunk "Invariant $name does not hold for sub $sub-name and value $(self!format($value))";
+    if not self!call-check($check, @capture, $value) {
+      flunk "Invariant '$name' does not hold for sub $sub-name called with $(self!format(@capture.perl)) (returned $(self!format($value)))";
       return;
     }
   }
-  pass "Invariant $name holded for sub $name for every value tested.";
+  pass "Invariant '$name' holded for sub $sub-name for every value tested.";
+}
+
+method !call-check(Callable $check, @capture, $value) {
+  given $check.arity {
+    when 1 {
+      $check($value);
+    }
+    when 2 {
+      $check($value, @capture);
+    }
+    default {
+      die "Cannot call check function with arity $_.";
+    }
+  }
 }
 
 method !generate-for-sig(Signature $c) {
   gather for $c.params {
-    # TODO do something with invocant?
     when .capture {
       die "Capture parameter NYI";
     }

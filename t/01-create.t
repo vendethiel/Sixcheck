@@ -4,7 +4,7 @@ use Sixcheck;
 
 my Sixcheck $checker .= new;
 
-plan 5;
+plan 8;
 
 ok $checker.instantiate(Int) ~~ *..*, 'Int generates an int';
 
@@ -15,11 +15,21 @@ $checker.check(SmallInt, * >= 10, :name<minimum value>);
 #$checker.check(SmallInt, * > 10); uncomment to fail! (don't forget to fix plan;)
 $checker.check(SmallInt, * <= 50, :name<maximum value>);
 
-multi sub f(Int) { 1 }
-multi sub f(Str) { "2" }
+sub id(Int $n) { $n };
+$checker.check-sub(&id, { $^n == $^n }, :name<can accept one argument (id returns its argument)>);
+$checker.check-sub(&id, * == *[0], :name<can accept two arguments (id returns its argument 0)>);
+
+sub add(Int $x, Int $y) { $x + $y };
+$checker.check-sub(&add, * == *.reduce(*+*),
+  :name<can use all the generated arguments>);
+
+
+multi sub multiple-candidates(Int) { 1 }
+multi sub multiple-candidates(Str) { "2" }
 
 # TODO once rakudo's bug with MultiSub is fix, remove the .candidates[0]
-$checker.check-sub(&f.candidates[0], * == 1 | 2, :name<return value>);
+$checker.check-sub(&multiple-candidates.candidates[0], * == 1 | 2,
+  :name<return value>);
 
 dies_ok {
   sub with-capture(|c) { 0 }
