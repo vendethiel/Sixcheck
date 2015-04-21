@@ -5,7 +5,7 @@ has Int $.iterations = 100;
 has $!create = :{
   DEFAULT => *.new,
   (Int) => { (-5000..5000).pick },
-  (Str) => { ("a".."z", "A".."Z").roll: (^50).pick },
+  (Str) => { join '', ("a".."z", "A".."Z").pick xx (^50).pick },
 }
 
 method register-type(Mu:U \type, Callable $check) {
@@ -39,27 +39,27 @@ method check(Mu:U \type, Callable $check, :$name) {
 #  $.check-sub($_, $check) for $f.candidates;
 #}
 
-multi method check-sub(Callable $f, Callable $check, :$name = '') {
+multi method check-sub(Callable $f, Callable $check, :$name!) {
   use Test;
   my $sub-name = $f.name || "<anon>";
   for ^$.iterations {
-    my @capture = self!generate-for-sig($f.signature);
-    my $value = $f(|@capture);
-    if not self!call-check($check, @capture, $value) {
-      flunk "Invariant '$name' does not hold for sub $sub-name called with $(self!format(@capture.perl)) (returned $(self!format($value)))";
+    my ($named, @pos) = self!generate-for-sig($f.signature);
+    my $value = $f(|$named, |@pos);
+    if not self!call-check($check, @pos, %$named, $value) {
+      flunk "Invariant '$name' does not hold for sub $sub-name called with $(self!format(@pos.perl)) and $(self!format($named.perl)) (returned $(self!format($value)))";
       return;
     }
   }
   pass "Invariant '$name' holded for sub $sub-name for every value tested.";
 }
 
-method !call-check(Callable $check, @capture, $value) {
+method !call-check(Callable $check, @pos, %named, $value) {
   given $check.arity {
     when 1 {
-      $check($value);
+      $check($value, |%named);
     }
     when 2 {
-      $check($value, @capture);
+      $check($value, @pos, |%named);
     }
     default {
       die "Cannot call check function with arity $_.";
@@ -68,13 +68,14 @@ method !call-check(Callable $check, @capture, $value) {
 }
 
 method !generate-for-sig(Signature $c) {
-  gather for $c.params {
+  my %named;
+  my @pos = gather for $c.params {
     when .capture {
       die "Capture parameter NYI";
     }
     when .named {
-      # pick one of the .named-names... Doesn't matter.
-      take .named-names.pick => $.instantiate(.type);
+      # pick one of the .named_names... Doesn't matter.
+      %named{.named_names.pick} = $.instantiate(.type);
     }
     when .positional && .optional {
       take $.instantiate(.type) if Bool.pick;
@@ -89,6 +90,7 @@ method !generate-for-sig(Signature $c) {
       die "Unable to generate anything for parameter $(.perl)";
     }
   }
+  $%named, @pos
 }
 
 method !format($_) { $_.Str.substr(0, 50) }

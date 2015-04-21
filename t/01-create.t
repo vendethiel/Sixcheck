@@ -4,7 +4,7 @@ use Sixcheck;
 
 my Sixcheck $checker .= new;
 
-plan 8;
+plan 9;
 
 ok $checker.instantiate(Int) ~~ *..*, 'Int generates an int';
 
@@ -23,6 +23,8 @@ sub add(Int $x, Int $y) { $x + $y };
 $checker.check-sub(&add, * == *.reduce(*+*),
   :name<can use all the generated arguments>);
 
+sub capitalize(Str :$text) { $text.uc }
+$checker.check-sub(&capitalize, { $^x.elems == $:text.elems }, :name<will also fill named parameters>);
 
 multi sub multiple-candidates(Int) { 1 }
 multi sub multiple-candidates(Str) { "2" }
