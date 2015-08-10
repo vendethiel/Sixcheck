@@ -76,6 +76,7 @@ method !generate-for-sig(Signature $c) {
     when .named {
       # pick one of the .named_names... Doesn't matter.
       %named{.named_names.pick} = $.instantiate(.type);
+      #take .named_names.pick => $.instantiate(.type);
     }
     when .positional && .optional {
       take $.instantiate(.type) if Bool.pick;
@@ -91,6 +92,9 @@ method !generate-for-sig(Signature $c) {
     }
   }
   $%named, @pos
+  # NOTE: could use a single @pos array,
+  # but would need this for invoking:
+  # f(|@a.grep(Pair), |@a.grep(* !~~ Pair))
 }
 
 method !format($_) { $_.Str.substr(0, 50) }
