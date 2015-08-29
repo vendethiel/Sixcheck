@@ -4,7 +4,7 @@ use Sixcheck;
 
 my Sixcheck $checker .= new;
 
-plan 9;
+plan 10;
 
 ok $checker.instantiate(Int) ~~ *..*, 'Int generates an int';
 
@@ -20,11 +20,14 @@ $checker.check-sub(&id, { $^n == $^n }, :name<can accept one argument (id return
 $checker.check-sub(&id, * == *[0], :name<can accept two arguments (id returns its argument 0)>);
 
 sub add(Int $x, Int $y) { $x + $y };
-$checker.check-sub(&add, * == *.reduce(*+*),
+$checker.check-sub(&add, { $^x == $^y[0] + $^y[1] },
   :name<can use all the generated arguments>);
 
-sub capitalize(Str :$text) { $text.uc }
-$checker.check-sub(&capitalize, { $^x.elems == $:text.elems }, :name<will also fill named parameters>);
+#sub splat-add(Int *@vals) {
+#  @vals[1];
+#}
+#$checker.check-sub(&splat-add, * == -> $, $v, *@ { $v },
+#  :name<it fills in splats>);
 
 multi sub multiple-candidates(Int) { 1 }
 multi sub multiple-candidates(Str) { "2" }
@@ -33,7 +36,19 @@ multi sub multiple-candidates(Str) { "2" }
 $checker.check-sub(&multiple-candidates.candidates[0], * == 1 | 2,
   :name<return value>);
 
-dies_ok {
+sub TODO-fails-ok {
+  # TODO this "works" but we cannot *expect a failure*
+  # TODO [Coke]: run as an external process
+  sub fails-on-zero(Int $n) { fail if !$n; }
+  $checker.check-sub(&fails-on-zero,
+    :name<it checks special cases>);
+}
+
+dies-ok {
   sub with-capture(|c) { 0 }
   $checker.check-sub(&with-capture, * == 0);
 }, "Can't generate capture arguments";
+
+sub capitalize(Str :$text) { $text.uc }
+$checker.check-sub(&capitalize, { $^x.elems == $:text.elems }, :name<will also fill named parameters>);
+
