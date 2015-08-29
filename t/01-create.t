@@ -36,12 +36,12 @@ multi sub multiple-candidates(Str) { "2" }
 $checker.check-sub(&multiple-candidates.candidates[0], * == 1 | 2,
   :name<return value>);
 
-sub TODO-fails-ok {
-  # TODO this "works" but we cannot *expect a failure*
-  # TODO [Coke]: run as an external process
-  sub fails-on-zero(Int $n) { fail if !$n; }
+{
+  my $tested;
+  sub fails-on-zero(Int $n) { $tested = True unless $n; }
   $checker.check-sub(&fails-on-zero,
     :name<it checks special cases>);
+  ok($tested, "The sub was called with a special case");
 }
 
 dies-ok {
