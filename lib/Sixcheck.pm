@@ -1,17 +1,27 @@
 unit class Sixcheck;
 
-has Int $.iterations = 100;
+has Int $.iterations is rw = 100;
 
-has $!create = :{
-  DEFAULT => *.new,
-  (Int) => { (-5000..5000).pick },
-  (Str) => { join '', ("a".."z", "A".."Z").pick xx (^50).pick },
+my @r = flat("a".."z", "A".."Z");
+
+has $!create;
+
+submethod BUILD() {
+  $!create = :{
+    DEFAULT => *.new,
+    (Int) => { (-5000..5000).pick },
+    (Str) => { join '', @r.pick xx (^25).pick },
+    (Signature) => -> Signature $sig {
+      # return a sub accepting anything...
+      -> | { self.instantiate($sig.returns) }
+    },
+  };
 }
 
 has $!special-cases = :{
   (Int) => (-1, 0, 1),
   (Str) => ("") # TODO add some unicode weirdness I guess
-}
+};
 
 method register-type(Mu:U \type, Callable $check) {
   die "Type already registered: $(type.perl)" if $!create{type}:exists;
@@ -22,8 +32,14 @@ method instantiate(Mu:U \type) {
   # a special case will be used one in fifth time
   if $!special-cases{type} && !(^5).pick {
     $!special-cases{type}.pick;
-  } elsif $!create{type}:exists {
-    $!create{type}();
+  } elsif $!create{type} -> $t {
+    if $t.arity == 0 {
+      $t() 
+    } elsif .arity == 1 {
+      $t(type)
+    } else {
+      die "Invalid arity for type instantiation"
+    }
   } else {
     $!create<DEFAULT>(type);
   }
