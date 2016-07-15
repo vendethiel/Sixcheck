@@ -67,11 +67,11 @@ multi method check-sub(Callable $f, :$name!) {
   use Test;
   my $sub-name = $f.name || "<anon>";
   for ^$.iterations {
-    my ($named, @pos) = self!generate-for-sig($f.signature);
-    $f(|$named, |@pos);
+    my ($named, $pos) = self!generate-for-sig($f.signature);
+    $f(|$named, |$pos);
     CATCH {
       default {
-        flunk "Check '$name' failed for sub $sub-name called with $(self!format(@pos.perl)) and $(self!format($named.perl))";
+        flunk "Check '$name' failed for sub $sub-name called with $(self!format($pos.perl)) and $(self!format($named.perl))";
         return;
       }
     }
@@ -83,23 +83,23 @@ multi method check-sub(Callable $f, Callable $check, :$name!) {
   use Test;
   my $sub-name = $f.name || "<anon>";
   for ^$.iterations {
-    my ($named, @pos) = self!generate-for-sig($f.signature);
-    my $value = $f(|$named, |@pos);
-    if not self!call-check($check, @pos, %$named, $value) {
-      flunk "Invariant '$name' does not hold for sub $sub-name called with $(self!format(@pos.perl)) and $(self!format($named.perl)) (returned $(self!format($value)))";
+    my ($named, $pos) = self!generate-for-sig($f.signature);
+    my $value = $f(|$named, |$pos);
+    if not self!call-check($check, $pos, %$named, $value) {
+      flunk "Invariant '$name' does not hold for sub $sub-name called with $(self!format($pos.perl)) and $(self!format($named.perl)) (returned $(self!format($value)))";
       return;
     }
   }
-  pass "Invariant '$name' holded for sub $sub-name for every value tested.";
+  pass "Invariant '$name' held for sub $sub-name for every value tested.";
 }
 
-method !call-check(Callable $check, @pos, %named, $value) {
+method !call-check(Callable $check, $pos, %named, $value) {
   given $check.arity {
     when 1 {
       $check($value, |%named);
     }
     when 2 {
-      $check($value, @pos, |%named);
+      $check($value, $pos, |%named);
     }
     default {
       die "Cannot call check function with arity $_.";
@@ -130,10 +130,7 @@ method !generate-for-sig(Signature $c) {
       die "Unable to generate anything for parameter $(.perl)";
     }
   }
-  $%named, @pos
-  # NOTE: could use a single @pos array,
-  # but would need this for invoking:
-  # f(|@a.grep(Pair), |@a.grep(* !~~ Pair))
+  $%named, $@pos
 }
 
 method !format($_) { $_.Str.substr(0, 50) }
