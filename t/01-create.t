@@ -4,7 +4,7 @@ use Sixcheck;
 
 my Sixcheck $checker .= new;
 
-plan 12;
+plan 13;
 
 {
   ok $checker.instantiate(Int) ~~ *..*, 'Int generates an int';
@@ -54,8 +54,7 @@ plan 12;
   multi sub multiple-candidates(Int) { 1 }
   multi sub multiple-candidates(Str) { "2" }
 
-# TODO once rakudo's bug with MultiSub is fix, remove the .candidates[0]
-  $checker.check-sub(&multiple-candidates.candidates[0], * == 1 | 2,
+  $checker.check-sub(&multiple-candidates, * == 1 | 2,
     :name<return value>);
 }
 
