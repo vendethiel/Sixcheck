@@ -58,10 +58,9 @@ method check(Mu:U \type, Callable $check, :$name) {
   pass "Invariant $name held for type $(type.perl) for every value tested.";
 }
 
-#subset MultiSub of Sub where .candidates.elems > 1;
-#multi method check-sub(MultiSub $f, Callable $check) {
-#  $.check-sub($_, $check) for $f.candidates;
-#}
+multi method check-sub(Sub:D $f where $f.candidates > 1, $check, :$name!) {
+  $.check-sub($_, $check, :$name) for $f.candidates;
+}
 
 multi method check-sub(Callable $f, :$name!) {
   use Test;
