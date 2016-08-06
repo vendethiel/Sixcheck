@@ -56,6 +56,7 @@ plan 13;
 
   $checker.check-sub(&multiple-candidates, * == 1 | 2,
     :name<return value>);
+   # TODO make sure it fails with either == 1 or == 2
 }
 
 {
