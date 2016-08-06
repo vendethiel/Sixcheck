@@ -55,7 +55,7 @@ method check(Mu:U \type, Callable $check, :$name) {
       return;
     }
   }
-  pass "Invariant $name holded for type $(type.perl) for every value tested.";
+  pass "Invariant $name held for type $(type.perl) for every value tested.";
 }
 
 #subset MultiSub of Sub where .candidates.elems > 1;
@@ -76,7 +76,7 @@ multi method check-sub(Callable $f, :$name!) {
       }
     }
   }
-  pass "Invariant '$name' holded for sub $sub-name for every value tested.";
+  pass "Invariant '$name' held for sub $sub-name for every value tested.";
 }
 
 multi method check-sub(Callable $f, Callable $check, :$name!) {
